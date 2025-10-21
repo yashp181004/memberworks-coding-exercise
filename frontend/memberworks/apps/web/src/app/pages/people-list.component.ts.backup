@@ -1,0 +1,170 @@
+import { Component, OnInit } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
+import { FormBuilder, FormGroup, Validators } from '@angular/forms';
+
+export type Role = 'Admin' | 'Member' | 'Coach';
+
+export interface Person {
+  id?: number;
+  firstName: string;
+  lastName: string;
+  email: string;
+  role: Role;
+  createdAt?: string;
+}
+
+@Component({
+  selector: 'app-people-list',
+  standalone: false,
+  template: `
+    <mat-toolbar color="primary">
+      <span>People</span>
+    </mat-toolbar>
+
+    <div class="container">
+      <form [formGroup]="form" (ngSubmit)="save()" class="person-form">
+        <mat-form-field>
+          <input matInput placeholder="First name" formControlName="firstName" />
+        </mat-form-field>
+
+        <mat-form-field>
+          <input matInput placeholder="Last name" formControlName="lastName" />
+        </mat-form-field>
+
+        <mat-form-field>
+          <input matInput placeholder="Email" formControlName="email" />
+        </mat-form-field>
+
+        <mat-form-field>
+          <mat-select placeholder="Role" formControlName="role">
+            <mat-option value="Admin">Admin</mat-option>
+            <mat-option value="Member">Member</mat-option>
+            <mat-option value="Coach">Coach</mat-option>
+          </mat-select>
+        </mat-form-field>
+
+        <button mat-raised-button color="primary" type="submit">
+          {{ editing ? 'Update' : 'Create' }}
+        </button>
+        <button mat-button type="button" (click)="startCreate()">Clear</button>
+      </form>
+
+      <table mat-table [dataSource]="people" class="mat-elevation-z8">
+        <ng-container matColumnDef="id">
+          <th mat-header-cell *matHeaderCellDef>ID</th>
+          <td mat-cell *matCellDef="let p">{{p.id}}</td>
+        </ng-container>
+
+        <ng-container matColumnDef="firstName">
+          <th mat-header-cell *matHeaderCellDef>First</th>
+          <td mat-cell *matCellDef="let p">{{p.firstName}}</td>
+        </ng-container>
+
+        <ng-container matColumnDef="lastName">
+          <th mat-header-cell *matHeaderCellDef>Last</th>
+          <td mat-cell *matCellDef="let p">{{p.lastName}}</td>
+        </ng-container>
+
+        <ng-container matColumnDef="email">
+          <th mat-header-cell *matHeaderCellDef>Email</th>
+          <td mat-cell *matCellDef="let p">{{p.email}}</td>
+        </ng-container>
+
+        <ng-container matColumnDef="role">
+          <th mat-header-cell *matHeaderCellDef>Role</th>
+          <td mat-cell *matCellDef="let p">{{p.role}}</td>
+        </ng-container>
+
+        <ng-container matColumnDef="actions">
+          <th mat-header-cell *matHeaderCellDef></th>
+          <td mat-cell *matCellDef="let p">
+            <button mat-icon-button (click)="startEdit(p)"><mat-icon>edit</mat-icon></button>
+            <button mat-icon-button color="warn" (click)="delete(p)"><mat-icon>delete</mat-icon></button>
+          </td>
+        </ng-container>
+
+        <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+        <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
+      </table>
+    </div>
+  `,
+  styles: [`
+    .container {
+      padding: 16px;
+    }
+
+    .person-form {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      flex-wrap: wrap;
+      margin-bottom: 16px;
+    }
+
+    mat-form-field {
+      width: 200px;
+    }
+  `]
+})
+export class PeopleListComponent implements OnInit {
+  people: Person[] = [];
+  displayedColumns = ['id', 'firstName', 'lastName', 'email', 'role', 'actions'];
+  form: FormGroup;
+  editing: Person | null = null;
+  private baseUrl = '/api/people';
+
+  constructor(private http: HttpClient, private fb: FormBuilder) {
+    this.form = this.fb.group({
+      firstName: ['', Validators.required],
+      lastName: ['', Validators.required],
+      email: ['', [Validators.required, Validators.email]],
+      role: ['Member', Validators.required]
+    });
+  }
+
+  ngOnInit(): void {
+    this.load();
+  }
+
+  load() {
+    this.http.get<Person[]>(this.baseUrl).subscribe(x => this.people = x);
+  }
+
+  startCreate() {
+    this.editing = null;
+    this.form.reset({ role: 'Member' });
+  }
+
+  startEdit(p: Person) {
+    this.editing = p;
+    this.form.setValue({
+      firstName: p.firstName,
+      lastName: p.lastName,
+      email: p.email,
+      role: p.role
+    });
+  }
+
+  save() {
+    if (this.form.invalid) return;
+    const payload: Person = this.form.value;
+    if (this.editing) {
+      this.http.put(`${this.baseUrl}/${this.editing.id}`, payload).subscribe(() => {
+        this.load();
+        this.editing = null;
+        this.form.reset({ role: 'Member' });
+      }, (err: any) => alert(err.error?.message || 'Error'));
+    } else {
+      this.http.post<Person>(this.baseUrl, payload).subscribe(() => {
+        this.load();
+        this.form.reset({ role: 'Member' });
+      }, (err: any) => alert(err.error?.message || 'Error'));
+    }
+  }
+
+  delete(p: Person) {
+    if (!p.id) return;
+    if (!confirm(`Delete ${p.firstName} ${p.lastName}?`)) return;
+    this.http.delete(`${this.baseUrl}/${p.id}`).subscribe(() => this.load(), (err: any) => alert('Error'));
+  }
+}

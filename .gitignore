@@ -1,0 +1,30 @@
+# .NET
+bin/
+obj/
+*.user
+*.suo
+*.cache
+.vs/
+
+# Angular / Nx
+node_modules/
+dist/
+.angular/
+.nx/
+
+# Database
+*.db
+*.db-shm
+*.db-wal
+
+# IDE
+.vscode/
+.idea/
+
+# Environment
+appsettings.Development.json
+*.env
+
+# OS
+.DS_Store
+Thumbs.db

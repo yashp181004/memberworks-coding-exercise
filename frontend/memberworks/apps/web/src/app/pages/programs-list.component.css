@@ -1,0 +1,27 @@
+.container {
+  padding: 16px;
+}
+
+.program-form {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+
+mat-form-field {
+  width: 200px;
+}
+
+.assign-panel {
+  margin-top: 16px;
+  padding: 12px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+}
+
+.assign-panel label {
+  display: block;
+  margin-bottom: 8px;
+}

@@ -1,0 +1,15 @@
+.container {
+  padding: 16px;
+}
+
+.person-form {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+
+mat-form-field {
+  width: 200px;
+}

@@ -1,0 +1,95 @@
+<mat-toolbar color="accent">
+  <span>Programs</span>
+</mat-toolbar>
+
+<div class="container">
+  <form [formGroup]="form" (ngSubmit)="save()" class="program-form">
+    <mat-form-field>
+      <input matInput placeholder="Program name" formControlName="name" />
+    </mat-form-field>
+
+    <mat-form-field>
+      <input matInput placeholder="Description" formControlName="description" />
+    </mat-form-field>
+
+    <mat-form-field>
+      <input matInput [matDatepicker]="start" placeholder="Start date" formControlName="startDate" />
+      <mat-datepicker-toggle matSuffix [for]="start"></mat-datepicker-toggle>
+      <mat-datepicker #start></mat-datepicker>
+    </mat-form-field>
+
+    <mat-form-field>
+      <input matInput [matDatepicker]="end" placeholder="End date" formControlName="endDate" />
+      <mat-datepicker-toggle matSuffix [for]="end"></mat-datepicker-toggle>
+      <mat-datepicker #end></mat-datepicker>
+    </mat-form-field>
+
+    <button mat-raised-button color="primary" type="submit">Create</button>
+  </form>
+
+  <table mat-table [dataSource]="programs" class="mat-elevation-z8">
+    <ng-container matColumnDef="id">
+      <th mat-header-cell *matHeaderCellDef>ID</th>
+      <td mat-cell *matCellDef="let p">{{p.id}}</td>
+    </ng-container>
+
+    <ng-container matColumnDef="name">
+      <th mat-header-cell *matHeaderCellDef>Name</th>
+      <td mat-cell *matCellDef="let p">{{p.name}}</td>
+    </ng-container>
+
+    <ng-container matColumnDef="startDate">
+      <th mat-header-cell *matHeaderCellDef>Start</th>
+      <td mat-cell *matCellDef="let p">{{p.startDate | date}}</td>
+    </ng-container>
+
+    <ng-container matColumnDef="endDate">
+      <th mat-header-cell *matHeaderCellDef>End</th>
+      <td mat-cell *matCellDef="let p">{{p.endDate | date}}</td>
+    </ng-container>
+
+    <ng-container matColumnDef="assigned">
+      <th mat-header-cell *matHeaderCellDef>Assigned</th>
+      <td mat-cell *matCellDef="let p">
+        <ng-container *ngIf="p.assignedPersonIds && p.assignedPersonIds.length; else none">
+          <span *ngFor="let pid of p.assignedPersonIds; let i = index">
+            <ng-container *ngIf="people.find(pe => pe.id === pid) as person">
+              {{person.firstName}} {{person.lastName}}
+              <button mat-icon-button color="warn" (click)="removeAssignment(p.id!, person.id!)">
+                <mat-icon>remove_circle</mat-icon>
+              </button>
+            </ng-container>
+            <span *ngIf="i < p.assignedPersonIds.length - 1">, </span>
+          </span>
+        </ng-container>
+        <ng-template #none>—</ng-template>
+      </td>
+    </ng-container>
+
+    <ng-container matColumnDef="actions">
+      <th mat-header-cell *matHeaderCellDef></th>
+      <td mat-cell *matCellDef="let p">
+        <button mat-icon-button (click)="openAssign(p)"><mat-icon>group_add</mat-icon></button>
+        <button mat-icon-button color="warn" (click)="delete(p)"><mat-icon>delete</mat-icon></button>
+      </td>
+    </ng-container>
+
+    <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+    <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
+  </table>
+
+  <div *ngIf="assigningProgram" class="assign-panel">
+    <h3>Assign people to: {{assigningProgram.name}}</h3>
+    <div *ngFor="let person of people">
+      <label>
+        <input type="checkbox" [value]="person.id" (change)="togglePersonSelection(person.id!, $event)" />
+        {{person.firstName}} {{person.lastName}} ({{person.role}})
+      </label>
+    </div>
+
+    <button mat-raised-button color="primary" (click)="assignSelected()">
+      Assign selected
+    </button>
+    <button mat-button (click)="cancelAssign()">Cancel</button>
+  </div>
+</div>
