@@ -7,102 +7,15 @@ export interface Person {
   firstName: string;
   lastName: string;
   email: string;
-  role: number;  // Changed from Role to number
+  role: number;
   createdAt?: string;
 }
 
 @Component({
   selector: 'app-people-list',
   standalone: false,
-  template: `
-    <mat-toolbar color="primary">
-      <span>People</span>
-    </mat-toolbar>
-
-    <div class="container">
-      <form [formGroup]="form" (ngSubmit)="save()" class="person-form">
-        <mat-form-field>
-          <input matInput placeholder="First name" formControlName="firstName" />
-        </mat-form-field>
-
-        <mat-form-field>
-          <input matInput placeholder="Last name" formControlName="lastName" />
-        </mat-form-field>
-
-        <mat-form-field>
-          <input matInput placeholder="Email" formControlName="email" />
-        </mat-form-field>
-
-        <mat-form-field>
-          <mat-select placeholder="Role" formControlName="role">
-            <mat-option [value]="0">Member</mat-option>
-            <mat-option [value]="1">Admin</mat-option>
-            <mat-option [value]="2">Coach</mat-option>
-          </mat-select>
-        </mat-form-field>
-
-        <button mat-raised-button color="primary" type="submit">
-          {{ editing ? 'Update' : 'Create' }}
-        </button>
-        <button mat-button type="button" (click)="startCreate()">Clear</button>
-      </form>
-
-      <table mat-table [dataSource]="people" class="mat-elevation-z8">
-        <ng-container matColumnDef="id">
-          <th mat-header-cell *matHeaderCellDef>ID</th>
-          <td mat-cell *matCellDef="let p">{{p.id}}</td>
-        </ng-container>
-
-        <ng-container matColumnDef="firstName">
-          <th mat-header-cell *matHeaderCellDef>First</th>
-          <td mat-cell *matCellDef="let p">{{p.firstName}}</td>
-        </ng-container>
-
-        <ng-container matColumnDef="lastName">
-          <th mat-header-cell *matHeaderCellDef>Last</th>
-          <td mat-cell *matCellDef="let p">{{p.lastName}}</td>
-        </ng-container>
-
-        <ng-container matColumnDef="email">
-          <th mat-header-cell *matHeaderCellDef>Email</th>
-          <td mat-cell *matCellDef="let p">{{p.email}}</td>
-        </ng-container>
-
-        <ng-container matColumnDef="role">
-          <th mat-header-cell *matHeaderCellDef>Role</th>
-          <td mat-cell *matCellDef="let p">{{getRoleName(p.role)}}</td>
-        </ng-container>
-
-        <ng-container matColumnDef="actions">
-          <th mat-header-cell *matHeaderCellDef></th>
-          <td mat-cell *matCellDef="let p">
-            <button mat-icon-button (click)="startEdit(p)"><mat-icon>edit</mat-icon></button>
-            <button mat-icon-button color="warn" (click)="delete(p)"><mat-icon>delete</mat-icon></button>
-          </td>
-        </ng-container>
-
-        <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
-        <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
-      </table>
-    </div>
-  `,
-  styles: [`
-    .container {
-      padding: 16px;
-    }
-
-    .person-form {
-      display: flex;
-      gap: 12px;
-      align-items: center;
-      flex-wrap: wrap;
-      margin-bottom: 16px;
-    }
-
-    mat-form-field {
-      width: 200px;
-    }
-  `]
+  templateUrl: './people-list.component.html',
+  styleUrls: ['./people-list.component.css']
 })
 export class PeopleListComponent implements OnInit {
   people: Person[] = [];
@@ -116,7 +29,7 @@ export class PeopleListComponent implements OnInit {
       firstName: ['', Validators.required],
       lastName: ['', Validators.required],
       email: ['', [Validators.required, Validators.email]],
-      role: [0, Validators.required]  // Changed default to 0 (Member)
+      role: [0, Validators.required]
     });
   }
 
@@ -130,7 +43,7 @@ export class PeopleListComponent implements OnInit {
 
   startCreate() {
     this.editing = null;
-    this.form.reset({ role: 0 });  // Reset to 0 (Member)
+    this.form.reset({ role: 0 });
   }
 
   startEdit(p: Person) {
@@ -144,7 +57,10 @@ export class PeopleListComponent implements OnInit {
   }
 
   save() {
-    if (this.form.invalid) return;
+    if (this.form.invalid) {
+      alert('Please fill in all required fields correctly');
+      return;
+    }
     const payload: Person = this.form.value;
     if (this.editing) {
       this.http.put(`${this.baseUrl}/${this.editing.id}`, payload).subscribe(() => {
@@ -166,7 +82,6 @@ export class PeopleListComponent implements OnInit {
     this.http.delete(`${this.baseUrl}/${p.id}`).subscribe(() => this.load(), (err: any) => alert('Error'));
   }
 
-  // Helper method to display role names in the table
   getRoleName(role: number): string {
     switch(role) {
       case 0: return 'Member';

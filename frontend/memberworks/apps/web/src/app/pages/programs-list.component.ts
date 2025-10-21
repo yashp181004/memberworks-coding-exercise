@@ -257,19 +257,26 @@ export class ProgramsListComponent implements OnInit {
   }
 
   assignSelected() {
-    if (!this.assigningProgram?.id || this.selectedPersonIds.length === 0) {
-      alert('Please select at least one person');
-      return;
-    }
-    this.http.post(`${this.programsUrl}/${this.assigningProgram.id}/assign`, this.selectedPersonIds).subscribe(() => {
+  if (!this.assigningProgram?.id || this.selectedPersonIds.length === 0) {
+    alert('Please select at least one person');
+    return;
+  }
+  this.http.post(`${this.programsUrl}/${this.assigningProgram.id}/assign`, this.selectedPersonIds).subscribe(
+    (response: any) => {
       this.load();
       this.assigningProgram = null;
       this.selectedPersonIds = [];
-    }, (err: any) => {
-      // Show specific error message if duplicate assignment
+      
+      // Show message if there were duplicates
+      if (response && response.message) {
+        alert(response.message);
+      }
+    }, 
+    (err: any) => {
       alert(err.error?.message || 'Error assigning people');
-    });
-  }
+    }
+  );
+}
 
   removeAssignment(programId: number, personId: number) {
     if (!confirm('Remove this person from program?')) return;
