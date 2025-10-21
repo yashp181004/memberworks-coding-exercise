@@ -111,27 +111,42 @@ namespace Memberworks.Api.Controllers
         }
 
         [HttpPost("{programId}/assign")]
-        public async Task<IActionResult> AssignPeople(int programId, [FromBody] int[] personIds)
+public async Task<IActionResult> AssignPeople(int programId, [FromBody] int[] personIds)
+{
+    var program = await _db.Programs.FindAsync(programId);
+    if (program == null) return NotFound();
+
+    var existingPeople = await _db.People.Where(p => personIds.Contains(p.Id)).Select(p => p.Id).ToListAsync();
+    var missing = personIds.Except(existingPeople).ToList();
+    if (missing.Any()) return BadRequest(new { message = $"People not found: {string.Join(',', missing)}" });
+
+    var duplicates = new List<int>();
+    foreach (var pid in personIds.Distinct())
+    {
+        var already = await _db.ProgramAssignments.AnyAsync(pa => pa.ProgramEntityId == programId && pa.PersonId == pid);
+        if (already)
         {
-            var program = await _db.Programs.FindAsync(programId);
-            if (program == null) return NotFound();
-
-            var existingPeople = await _db.People.Where(p => personIds.Contains(p.Id)).Select(p => p.Id).ToListAsync();
-            var missing = personIds.Except(existingPeople).ToList();
-            if (missing.Any()) return BadRequest(new { message = $"People not found: {string.Join(',', missing)}" });
-
-            foreach (var pid in personIds.Distinct())
-            {
-                var already = await _db.ProgramAssignments.AnyAsync(pa => pa.ProgramEntityId == programId && pa.PersonId == pid);
-                if (!already)
-                {
-                    _db.ProgramAssignments.Add(new ProgramAssignment { PersonId = pid, ProgramEntityId = programId });
-                }
-            }
-            await _db.SaveChangesAsync();
-
-            return NoContent();
+            duplicates.Add(pid);
         }
+        else
+        {
+            _db.ProgramAssignments.Add(new ProgramAssignment { PersonId = pid, ProgramEntityId = programId });
+        }
+    }
+    
+    await _db.SaveChangesAsync();
+
+    if (duplicates.Any())
+    {
+        var names = await _db.People
+            .Where(p => duplicates.Contains(p.Id))
+            .Select(p => $"{p.FirstName} {p.LastName}")
+            .ToListAsync();
+        return Ok(new { message = $"Note: {string.Join(", ", names)} already assigned to this program", duplicatesSkipped = duplicates.Count });
+    }
+
+    return NoContent();
+}
 
         [HttpDelete("{programId}/remove/{personId}")]
         public async Task<IActionResult> Remove(int programId, int personId)

@@ -34,6 +34,9 @@ export interface Program {
       <form [formGroup]="form" (ngSubmit)="save()" class="program-form">
         <mat-form-field>
           <input matInput placeholder="Program name" formControlName="name" />
+          <mat-error *ngIf="form.get('name')?.hasError('required')">
+            Name is required
+          </mat-error>
         </mat-form-field>
 
         <mat-form-field>
@@ -44,15 +47,24 @@ export interface Program {
           <input matInput [matDatepicker]="start" placeholder="Start date" formControlName="startDate" />
           <mat-datepicker-toggle matSuffix [for]="start"></mat-datepicker-toggle>
           <mat-datepicker #start></mat-datepicker>
+          <mat-error *ngIf="form.get('startDate')?.hasError('required')">
+            Start date is required
+          </mat-error>
         </mat-form-field>
 
         <mat-form-field>
           <input matInput [matDatepicker]="end" placeholder="End date" formControlName="endDate" />
           <mat-datepicker-toggle matSuffix [for]="end"></mat-datepicker-toggle>
           <mat-datepicker #end></mat-datepicker>
+          <mat-error *ngIf="form.get('endDate')?.hasError('required')">
+            End date is required
+          </mat-error>
         </mat-form-field>
 
-        <button mat-raised-button color="primary" type="submit">Create</button>
+        <button mat-raised-button color="primary" type="submit">
+          {{ editing ? 'Update' : 'Create' }}
+        </button>
+        <button mat-button type="button" (click)="cancel()" *ngIf="editing">Cancel</button>
       </form>
 
       <table mat-table [dataSource]="programs" class="mat-elevation-z8">
@@ -98,6 +110,7 @@ export interface Program {
           <th mat-header-cell *matHeaderCellDef></th>
           <td mat-cell *matCellDef="let p">
             <button mat-icon-button (click)="openAssign(p)"><mat-icon>group_add</mat-icon></button>
+            <button mat-icon-button (click)="edit(p)"><mat-icon>edit</mat-icon></button>
             <button mat-icon-button color="warn" (click)="delete(p)"><mat-icon>delete</mat-icon></button>
           </td>
         </ng-container>
@@ -157,6 +170,7 @@ export class ProgramsListComponent implements OnInit {
   people: Person[] = [];
   displayedColumns = ['id', 'name', 'startDate', 'endDate', 'assigned', 'actions'];
   form: FormGroup;
+  editing: Program | null = null;
   assigningProgram: Program | null = null;
   selectedPersonIds: number[] = [];
   private programsUrl = '/api/programs';
@@ -181,23 +195,52 @@ export class ProgramsListComponent implements OnInit {
   }
 
   save() {
-    if (this.form.invalid) return;
+    if (this.form.invalid) {
+      alert('Please fill in all required fields');
+      return;
+    }
+
     const p: Program = {
       name: this.form.value.name,
       description: this.form.value.description,
       startDate: new Date(this.form.value.startDate).toISOString(),
       endDate: new Date(this.form.value.endDate).toISOString()
     };
-    this.http.post<Program>(this.programsUrl, p).subscribe(() => {
-      this.load();
-      this.form.reset();
-    }, (err: any) => alert(err.error?.message || 'Error'));
+
+    if (this.editing) {
+      // Update existing program
+      this.http.put(`${this.programsUrl}/${this.editing.id}`, p).subscribe(() => {
+        this.load();
+        this.cancel();
+      }, (err: any) => alert(err.error?.message || 'Error updating program'));
+    } else {
+      // Create new program
+      this.http.post<Program>(this.programsUrl, p).subscribe(() => {
+        this.load();
+        this.form.reset();
+      }, (err: any) => alert(err.error?.message || 'Error creating program'));
+    }
+  }
+
+  edit(program: Program) {
+    this.editing = program;
+    this.form.patchValue({
+      name: program.name,
+      description: program.description,
+      startDate: new Date(program.startDate),
+      endDate: new Date(program.endDate)
+    });
+  }
+
+  cancel() {
+    this.editing = null;
+    this.form.reset();
   }
 
   delete(program: Program) {
     if (!program.id) return;
     if (!confirm(`Delete program ${program.name}?`)) return;
-    this.http.delete(`${this.programsUrl}/${program.id}`).subscribe(() => this.load(), (err: any) => alert('Error'));
+    this.http.delete(`${this.programsUrl}/${program.id}`).subscribe(() => this.load(), (err: any) => alert('Error deleting program'));
   }
 
   openAssign(program: Program) {
@@ -214,17 +257,23 @@ export class ProgramsListComponent implements OnInit {
   }
 
   assignSelected() {
-    if (!this.assigningProgram?.id || this.selectedPersonIds.length === 0) return;
+    if (!this.assigningProgram?.id || this.selectedPersonIds.length === 0) {
+      alert('Please select at least one person');
+      return;
+    }
     this.http.post(`${this.programsUrl}/${this.assigningProgram.id}/assign`, this.selectedPersonIds).subscribe(() => {
       this.load();
       this.assigningProgram = null;
       this.selectedPersonIds = [];
-    }, (err: any) => alert(err.error?.message || 'Error'));
+    }, (err: any) => {
+      // Show specific error message if duplicate assignment
+      alert(err.error?.message || 'Error assigning people');
+    });
   }
 
   removeAssignment(programId: number, personId: number) {
     if (!confirm('Remove this person from program?')) return;
-    this.http.delete(`${this.programsUrl}/${programId}/remove/${personId}`).subscribe(() => this.load(), (err: any) => alert('Error'));
+    this.http.delete(`${this.programsUrl}/${programId}/remove/${personId}`).subscribe(() => this.load(), (err: any) => alert('Error removing assignment'));
   }
 
   cancelAssign() {
